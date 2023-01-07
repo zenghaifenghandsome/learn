@@ -7,10 +7,16 @@
     - Hive分析数据底层的实现是MapReduce（也可配置为Spark或者Tez）
     - 执行程序运行在Yarn上
 ## Hive架构原理
+1
 ## metastore服务
- hive和mysql并不是分布式的，在hadoop103上的mysql存储的meta，hadoop102上的hive是无法操作的，这是metastore嵌入式模式，默认嵌入式模式
-生产环境不使用嵌入式，使用独立模式
-独立模式：hive-cli统一都访问同一个metastore服务（只需要在hive-site.xml 添加metastore服务地址的配置就可以了）
+    hive和mysql并不是分布式的，在hadoop103上的mysql存储的meta，hadoop102上的hive是无法操作的，这是metastore嵌入式模式，默认嵌入式模式
+    生产环境不使用嵌入式，使用独立模式
+    独立模式：hive-cli统一都访问同一个metastore服务（只需要在hive-site.xml 添加metastore服务地址的配置就可以了）
+## Hive 启动脚本
+    - nohup 放在命令开头 关闭终端进程也继续保持运行状态（不可以ctr c）
+    - & 后台运行，不会卡住，可以继续操作终端
+    - 2>&1 错误重定向到标准输出
+    一般组合使用：nohup [xxx命令操作] >file 2>&1 &  表示将xxx命令运行的结果输出到file中，并保持命令启动的进程在后台运行。
 
 
 
