@@ -1,7 +1,15 @@
 # 创建表格式
-    create [temporary] [external] table [if not exists] 库名.表名[(字段名 字段类型 [comment 
-    字段描述],...)]
-    []
+    create [temporary] [external] table [if not exists] 库名.表名
+    [(
+        字段名 字段类型 [comment 字段描述],...
+    )]
+    [comment 描述]
+    [partitioned by (字段名 字段类型 [comment 描述],...)]
+    [clustered by (字段名,...) [sorted by (字段名[asc|desc],...)]into 桶的数量 buckets]
+    [row format 对数据的格式进行说明]
+    [stored as 文件的储存格式]
+    [location hdfs的路径--默认在库的下面]
+    [tblproperties ('属性名'='属性值',...)]
 ## 案例1
 ```sql 
 create table teacher_json(
@@ -86,7 +94,7 @@ name string
 ## 添加列
     alter table 表名 add columns (字段名 字段类型 [comment 描述],...);
 ## 修改列的名字
-    alter table 表名 change columns 原字段名 新字段名 字段的类型 [comment 描述]
+    alter table 表名 change column 原字段名 新字段名 字段的类型 [comment 描述]
 ## 修改列的类型--注意类型
     alter table 表名 change column 字段名 字段名 字段的新类型 [comment 描述] [first|after 字段名];
 ## 管理表和外部表相互替换
