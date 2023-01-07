@@ -7,5 +7,10 @@
     - Hive分析数据底层的实现是MapReduce（也可配置为Spark或者Tez）
     - 执行程序运行在Yarn上
 ## Hive架构原理
+## metastore服务
+ hive和mysql并不是分布式的，在hadoop103上的mysql存储的meta，hadoop102上的hive是无法操作的，这是metastore嵌入式模式，默认嵌入式模式
+生产环境不使用嵌入式，使用独立模式
+独立模式：hive-cli统一都访问同一个metastore服务（只需要在hive-site.xml 添加metastore服务地址的配置就可以了）
+
 
 
