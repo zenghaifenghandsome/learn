@@ -13,7 +13,6 @@
     2. 在spring配置文件配置对象创建，配置有构造方法注入
 ### P名称空间注入
     使用P名称空间注入，可以简化基于xml配置方式
-    
     1. 添加p命名空间在配置文件中
         xmlns:p="http://www.springframework.org/schema/p"
     2. 进行属性注入，在bean标签里面进行操作
@@ -23,5 +22,8 @@
     1. null值
         <property name="address"><null /></property>
     2. 属性值包含特殊符号
+        - 转义
+        - cdata
+ 
 
 
