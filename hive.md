@@ -18,5 +18,20 @@
     - 2>&1 错误重定向到标准输出
     一般组合使用：nohup [xxx命令操作] >file 2>&1 &  表示将xxx命令运行的结果输出到file中，并保持命令启动的进程在后台运行。
 
+## 文件格式
+### textfile
+### orc
+### Parquet
+    结构和orc几乎一致，以页为基本存储单位，Footer中存储了数据的元数据信息，通过footer可以找到具体的数据所在的位置
+```sql
+create table parquet_tbl(
+    id int,
+    name string
+)
+stored as parquest;
+```
+### 注意：orc和parquet不能直接load数据，必须通过insert方式插入数据
+insert into table orc_tbl select id,name from text_file_tbl;
+
 
 
