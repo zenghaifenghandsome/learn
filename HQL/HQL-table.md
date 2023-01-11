@@ -97,7 +97,7 @@ name string
     alter table 表名 change column 原字段名 新字段名 字段的类型 [comment 描述]
 ## 修改列的类型--注意类型
     alter table 表名 change column 字段名 字段名 字段的新类型 [comment 描述] [first|after 字段名];
-## 管理表和外部表相互替换
+## 管理表和外部表相互转换
     alter table 表名 set tblproperties('EXTERNAL'='TRUE|FALSE');
 ## 替换列（替换的顺序是依次替换，注意替换的字段的类型，如果替换的字段数少于原字段的个数，那么只显示有字段的列）
     alter table 表名 replace columns (字段名 字段类型 [comment 描述],...)

@@ -17,3 +17,8 @@
 ### 导出到HDFS
     insert overwrite directory '/datas/student' row format delimited fields terminated by '\t' select * from student;
 
+# Export | Import
+## export
+    export table tableName to 'HDFS-path'
+## import
+    import [external] table 不存在的表的表名 from 'hdfs的路径' [location 'import_target_path']
