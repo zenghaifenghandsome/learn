@@ -33,5 +33,12 @@ stored as parquest;
 ### 注意：orc和parquet不能直接load数据，必须通过insert方式插入数据
 insert into table orc_tbl select id,name from text_file_tbl;
 
+## 数据压缩
+### textfile
+    默认不压缩
+    开启压缩：set hive.exec.compress.output=true;
+    设置输出压缩格式：set mapreduce.output
+
+
 
 
