@@ -37,7 +37,8 @@ insert into table orc_tbl select id,name from text_file_tbl;
 ### textfile
     默认不压缩
     开启压缩：set hive.exec.compress.output=true;
-    设置输出压缩格式：set mapreduce.output
+    设置输出压缩格式：set mapreduce.output.fileoutputformat.compress.codec=org.apache.hadoop.io.compress.SnappyCodec;
+
 
 
 
