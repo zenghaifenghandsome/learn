@@ -7,3 +7,7 @@
     在yarn-site.xml中配置
     分发-重启
 ## mapreduce资源配置
+
+## 分组聚合优化
+### map-side 聚合优化
+    
