@@ -47,3 +47,7 @@
 >        tar -zxvf kafka 
 >        ```
 >    3. 修改config目录下的配置文件 **server.properties**
+>       ```
+>           #broker的全局唯一编号，不能重复只能是数字
+>           broker.id=102
+>       ```
