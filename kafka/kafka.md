@@ -43,5 +43,7 @@
 ### 安装部署
 >    1. 官网下载[kafka官网](http://kafka.apache.org/downloads.html)
 >    2. 上传到服务器并解压
->        tar -zxvf kafka
+>       ```shell
+>        tar -zxvf kafka 
+>        ```
 >    3. 修改config目录下的配置文件 **server.properties**
