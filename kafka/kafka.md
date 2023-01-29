@@ -29,7 +29,11 @@
     - Broker：一个kafka服务器就是一个broker,一个broker可以容纳多个topic
     - Topic：可以理解为一个队列，生产者和消费者面向的都是一个topic
     - Partition：为了实现扩展性，一个非常大的topic可以分布到多个broker上，一个topic可以分为多个partition，每个partition都是一个有序的队列
-    -Replica：副本，为保证集群中的某个节点发生故障时，该节点上的partition数据不丢失，且kafka任能继续工作，kafka提供了副本机制，一个topic的每个partition都有若干个副本，一个leader和若干个follower
+    - Replica：副本，为保证集群中的某个节点发生故障时，该节点上的partition数据不丢失，且kafka任能继续工作，kafka提供了副本机制，一个topic的每个partition都有若干个副本，一个leader和若干个follower
     - leader：每个分区副本的“主”，生产者发送数据的对象，以及消费者消费的对象都是leader
-    -follower：每个分区副本的“从”，主动实时的和leader同步数据，在leader发生故障时，成为新的leader
-
+    - follower：每个分区副本的“从”，主动实时的和leader同步数据，在leader发生故障时，成为新的leader
+## kafka 快速入门
+### 安装部署
+    1. 官网下载[kafka官网](http://kafka.apache.org/downloads.html)
+    2. 上传到服务器并解压
+        tar -zxvf kafka
