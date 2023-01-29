@@ -59,6 +59,16 @@
     2. 引入外部属性文件配置数据库连接池
 
 
+## 开启组件扫描
+    use-default-filter="false" 表示现在不使用默认的filter，自己配置filter
+    context：include-filter，设置扫描哪些内容
+    context：exclude-filter，设置不扫描哪些内容
+## 基于注解的方式实现属性的注入
+    1. @Autowired:根据属性类型进行自动装配
+    2. @Qualifier:根据属性名称进行注入
+    3. @Resource:可以根据类型注入，也可以根据名称注入
+    4. @Value:注入普通类型属性
+    
 
 
 
