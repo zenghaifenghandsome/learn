@@ -41,13 +41,90 @@
 >    - follower：每个分区副本的“从”，主动实时的和leader同步数据，在leader发生故障时，成为新的leader
 ## kafka 快速入门
 ### 安装部署
->    1. 官网下载[kafka官网](http://kafka.apache.org/downloads.html)
->    2. 上传到服务器并解压
+>   1. 官网下载[kafka官网](http://kafka.apache.org/downloads.html)
+>   2. 上传到服务器并解压
 >       ```shell
 >        tar -zxvf kafka 
 >        ```
->    3. 修改config目录下的配置文件 **server.properties**
+>   3. 修改config目录下的配置文件 **server.properties**
 >       ```
 >           #broker的全局唯一编号，不能重复只能是数字
 >           broker.id=102
+>           #处理网络请求的线程数量
+>           num.network.threads=3
+>           #用来处理磁盘IO的线程数量
+>            num.IO.threads=8
+>           #发送套接字的缓冲区大小
+>           socket.send.buffer.bytes=102400
+>           #接收套接字的缓冲区大小
+>           socket.receive.buffer.bytes=102400
+>           #请求套接字的缓冲区大小
+>           socket.request.max.bytes=104857600
+>           #kafka运行日志（数据）存放的路径,路径不需要提前创建，kafka自动帮你创建
+>           #可以配置多个磁盘路径，路径和路径之间可以用“，”分隔
+>           log.dirs=/opt/module/kafka/datas
+>           #topic在当前broker上的分区个数
+>           num.partitions=1
+>           #用来恢复和清理data下数据的线程数
+>           num.recovery.threads.per.data.dir=1
+>           #每个topic创建时的副本数量，默认是1个副本
+>           offsets.topic.replication.factor=1
+>           #segment 文件保留的最长时间，超时将被删除
+>           log.retention.hours=168
+>           #每个segment 文件的大小，默认最大1G
+>           log.segment.bytes=1073741824
+>           #检查过期数据的时间，默认5分钟检查一次是否数据过期
+>           log.retention.check.interval.ms=300000
+>           #配置连接Zookeeper集群地址，（在zookeeper根目录创建/kafka,方便管理）
+>           zookeeper.connect=hadoop102:2181,hadoop103:2181,hadoop104:2181/kafka
 >       ```
+>   4.配置环境变量,并分发生效
+>   5.分发安装包
+>   6.修改配置文件中的broker.id
+>   7.启动集群
+>       **i.启动zookeeper集群：zk start**
+>       **ii.依次在三个节点上启动kafka：bin/kafka-server-start.sh -daemon config/server.properties**
+>       **iii.关闭集群：bin/kafka-server-stop.sh**
+### kafka群起脚本
+#### 脚本编写
+```bash
+#!/bin/bash
+if[ $# == 0 ]
+then
+    echo -e "请输入参数：\n start: 启动集群\n stop:停止集群\n" && exit
+fi
+case $1
+    "start")
+        for host in hadoop102 hadoop103 hadoop104
+            do
+                echo "==============$host 启动 kafka 集群 ===============
+                ssh $host "cd /opt/module/kafka; bin/kafka-server-start.sh -daemon config/server.properties"
+            done 
+        ;;
+    "stop")
+        for host in hadoop102 hadoop103 hadoop104
+            do
+                echo "==============$host 关闭 kafka 集群 ===============
+                ssh $host "cd /opt/module/kafka; bin/kafka-server-stop.sh"
+            done 
+        ;;
+    *)
+        echo "=============请输入正确的参数================"
+        echo -e "start  启动kafka集群;\n stop  停止kafka集群;\n" && exit
+        ;;
+esac 
+``` 
+#### 脚本文件添加权限
+```linux
+sudo chmod 777 kafka
+```
+#### 注意
+> **停止kafka集群时，一定要等kafka集群全部停止完毕后再停止zookeeper集群**
+> 因为zookeeper集群中记录者kafka集群的相关信息，zookeeper集群一旦先停止
+> kafka集群就无法获取停止进程的信息，只能手动杀死kafka进程
+### kafka命令行操作
+#### 操作topics命令
+    kafka.topics.sh [参数]
+##### 主要参数
+|- 参数 -|- 描述 -|
+|--bootstrap-server|连接kafka broker主机名称和端口号|
