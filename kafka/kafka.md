@@ -124,7 +124,61 @@ sudo chmod 777 kafka
 > kafka集群就无法获取停止进程的信息，只能手动杀死kafka进程
 ### kafka命令行操作
 #### 操作topics命令
-    kafka.topics.sh [参数]
+>    kafka-topics.sh [参数]
+>    1. 查看当前服务器中的所有topic
+>       kafka-topics.sh --bootstrap-server hadoop102:9092 --list 
+>    2. 创建一个主题名为first的topic
+>       kafka-topics.sh --bootstrap-server hadoop102:9092 --create --replication-factor 3 --partitions 1 --topic first
+>    3. 查看topic的详情
+>      kafka-topics.sh --bootstrap-server hadoop102:9092 --describe --topic first
+>    4. 修改分区数 **（注意：分区数只能增加，不能减少）**
+>       kafka-topics.sh --bootstrap-server hadoop102:9092 --alter --topic first --partitions 3
+>   5.删除topic
+>       kafka-topics.sh --bootstrap-server hadoop102:9092 --delete --topic first   
 ##### 主要参数
-|- 参数 -|- 描述 -|
+| 参数 | 描述 |
+|:----:|:----:|
 |--bootstrap-server|连接kafka broker主机名称和端口号|
+|--topic|操作的topic名称|
+|--create|创建主题|
+|--delete|删除主题|
+|--alter|修改主题|
+|--list|查看所有的主题|
+|--describe|查看主题详细描述|
+|--partitions|设置主题分区数|
+|--replication-factor|设置主题分区副本|
+|--config|更新系统默认的配置|
+#### 生产者命令行操作
+##### 命令
+```linux
+ kafka-console-producer.sh [参数]
+```
+>   1.生成消息
+>       kafka-console-producer.sh --bootstrap-server hadoop102:9092 --topic first
+##### 主要参数
+|参数|描述|
+|:----------:|:--------------:|
+|--bootstrap-server|连接kafka broker主机名称和端口号|
+|--topic|操作topic的名称|
+#### 消费者命令行操作
+##### 命令
+```linux
+    kafka-console-consumer.sh [参数]
+```
+> 1.消费消息
+>   kafka-console-consumer.sh --bootstrap-server hadoop:102 --topic first
+> 2.从头开始消费
+>   kafka-console-consumer.sh --bootstrap-server hadoop:102 --from-begining --topic first
+##### 主要参数
+|参数|描述|
+|:--:|:--:|
+|--bootstrap-server|连接kafka broker主机名称和端口号|
+|--topic|操作topic的名称|
+|--from-begining|从头开始消费|
+|--group|指定消费组名称|
+## kafka 生产者
+### 生产者消息发送流程
+#### 发送原理
+> kafka 的 Producer发送消息采用的是**异步发送**的方式
+>
+> 
