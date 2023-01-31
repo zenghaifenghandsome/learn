@@ -198,4 +198,221 @@ sudo chmod 777 kafka
 |acks|0：生产者发送过来的数据，不需要等数据落盘应答<br>1:生产者发送过来的数据，Leader数据落盘后应答<br>-1(all):生产者发送过来的数据，Leader和isr队列里的所有节点数据都落盘后应答。默认值是-1|
 |max.in.flight.requests.per.connection|允许最多没有返回ack的次数，默认是5，开启幂等性要保证该值是1-5的数字|
 |retries|当消息发送错误的时候，系统会重新发送消息，retries表示重试次数，默认值是int的最大值，2147483647<br>如果设置了重试，还想保证消息的有序性，需要设置MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION=1,否则在重试此失败消息的时候，其他消息可能发送成功了|
+|retry.backoff.ms|两次重试之间的时间间隔，默认是100ms|
+|enable.idempotence|是否开启幂等性，默认true，开启幂等性|
+|compression.type|生产者发送的所有数据的压缩方式，默认是none，不压缩，支持的压缩类型：none、gzip、snappy、lz4、zstd|
+### 异步发送API
+####普通异步发送(不带回调函数)
+###### 编写代码实现异步发送数据（producer）
+1. 创建maven工程，导入kafka依赖
+    ```xml
+    <!-- https://mvnrepository.com/artifact/org.apache.kafka/kafka-clients -->
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+            <version>3.3.1</version>
+        </dependency>
+    </dependencies>
+    ```
+2. create package and class :com.zenghaifeng.kafka.CustomProducer
+3. edit code
+    ```java
+   package com.zenghaifeng.kafka;
+    
+    import java.util.Properties;
+    import org.apache.kafka.clients.producer.ProducerConfig;
+    import org.apache.kafka.common.serialization.StringSerializer;
+    import org.apache.kafka.clients.KafkaProducer;
+    import org.apache.kafka..cliet.ProducerRecord;
+   public class CustomProducer{
+    public static void main(String[] args){
+            //create configuration object
+            Properties properties = new Properties();
+            
+            //put config
+            properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,"hadoop102:9092");//connection ip and port
+            properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,StringSerializer.class.getName());//set key serializer class
+            properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,StringSerializer.class.getName());//set vlue serializer class
+
+            //create Producer object
+            KafkaProducer producer = new KafkaProducer(properties);
+            //call `send` method to send message
+            for(int i = 1; i <= 10; i++){
+                producer.send(new ProducerRecord<>("first",i+" 号技师为您服务！"));
+            }
+            //close resources
+            producer.close();
+        }
+   }
+   ```
+4. test
+   - hadoop102 create consumer
+   - do code running
+#### 带回调函数的异步发送
+> callback function 会在producer 收到ack时调用，为异步调用
+>   this function have two parameters,**RecordMetadata(元数据信息)** and **Exception(异常信息)**
+>   - if Exception is null ,then send message is success
+>   - if Exception is not null ,then send message is failure
+> **PS: if send message failure,it will automatic retry,haven't manual retry on callback function**
+##### edit code
+```java
+    //...
+    for(int i = 1; i <= 10; i++>){
+        final ProducerRecord<String,String> producerRecord = new ProducerRecord<String,String>("first",i+" 号技师为您服务！");
+        System.out.println("你看我在哪");
+        producer.send(producerRecord,new Callback(){
+            @override
+            public void onCompletion(RecordMetadata recordMetadata,Exception e){
+                if(e == null){
+                    System.out.println("topic:" + recordMetadata.topic + "partition:" + recordMetadata.partition + "offset:" + recordMetadata.offset );
+                }
+            }
+        });
+    }
+    //...
+```
+### 同步发送
+> 同步发送的意思是，一条消息发送后，会阻塞当前线程，直至返回ack。
+> 由于send方法返回的是一个Feture对象，根据Feture对象的特点，
+> 我们也可以实现同步发送的效果，只需要在调用Feture对象的get()方法即可。
+##### edit code
+```java
+//...
+producer.send(producerRecord,new Callback(){}).get();
+//...
+```
+### 生产者分区
+#### 生产者分区的优势
+> 1. 便于合理使用存储资源，每个partitiion在一个broker上存储，可以把海量的数据按照分区切割成一块一块数据存储在多台broker上。合理控制分区的任务，可以实现负载均衡的效果
+> 2. 提高并行度，生产者可以以分区为单位发送数据，消费者可以以分区为单位进行消费数据
+> ![producer-partition](../pic/producer-partition.jpg)
+#### 生成者分区策略
+> 1. 默认分区器：DefaultPartitioner
+> 2. usage:
+>   - 我们需要将producer发送的数据封装成一个ProducerRecord对象
+>   - 上述的分区策略，我们在ProducerRecord对象中配置
+#### 策略实现
+|参数|解释|
+|:-|-|
+|ProducerRecord(topic,partition_num,...)|指明partition的情况下直接发往指定的分区|
+|ProducerRecord(topic,key,vulue)|没有指明partition，但是有key的情况下：将key的hash值与topic的partition的个数进行取余得到要发往的partition的id|
+|ProducerRecord(topic,value)|既没有partition值，又没有key值的情况下：kafka采用Sticky partition(粘性分区器)，会随机选择一个分区，并尽可能一直使用该分区，待该分区的batch已满或者已完成，kafka再随机选择一个分区使用（绝对不会是上次选择的分区）|
+#### 自定义分区器
+> 1. 生产环境中，我们往往需要更加自由的分区需求，我们可以自定义分区
+> 2. 实现步骤
+>   - 定义类，实现Partitioner接口
+>   - 重写partition() method
+##### code
+```java
+package com.zenghaifeng.kafka.producer;
+
+import org.apacher.kafka.client.producer.Partitioner;
+import org.apache.kafka.common.Cluster;
+import java.util.Map;
+
+pulic class CustomProducer implements Partitioner{
+    @override
+    public int partition(String topic, Object key,byte[] keyBytes,Object value,byte[] valueBytes,Cluster cluster){
+        String keyStr = key.toString();
+        int i = keyStr.hashCode();
+        int partition = (i & Integer.MAX_VALUE) % cluster.partitionCountForTopic("first");
+        return partition
+    }
+
+    @override
+    public void close(){
+        
+    };  
+
+    @override
+    public void configure(Map<String,?> config){
+    
+    };  
+}
+```
+#### test
+```java
+//在生产者代码中添加分区器配置
+properties.put(ProducerConfig.PARTITIONER_CLASS_CONFIG,"com.zenghaifeng.kafka.producer.CustomPartitioner");
+```
+### 生产经验--生产者如何提高吞吐量
+![producer-tunpuliang](../pic/producer-tunpuliang.jpg)
+> 在生产者配置对象中配置
+>```java
+>// batch.size:批次大小，默认16k
+>properties.put(ProducerConfig.BATCH_SIZE_CONFIG,16384);
+>
+>//lnigner.ms : 等待时间，默认0
+>properties.put(ProducerConfig.LINGER_MS_CONFIG,1);
+>
+>//RecordAccumulator:缓冲区大小，默认32M：buffer.memory
+>properties.put(ProducerConfig.BUFFER_MEMORY_CONFIG,33554432);
+>
+>//compression.type :压缩，默认none，可配置gzip，snappy，lz4和zstd
+>properties.put(ProducerConfig.COMPRESSION_TYPE_CONFIG,"snappy");
+>```
+### 生产经验-数据可靠性
+#### ack应答机制
+![ack](../pic/ack.jpg)
+### ack应答级别
+> 对于某些不太重要的数据，对数据的可靠性的要求不是很高，能够容忍数据的少量丢失，所以没必要等ISR中的follower全部接收成功。
+> 所以kafka为用户提供了3种可靠性级别，用户可以根据对可靠性和延迟的要求进行权衡，选择以下配置
+> |级别|解释|
+> |:-|-|
+> |acks=0|这一操作提供了一个最低的延迟，partition的leader副本接收到消息还没写入磁盘就已经返回ack，当leader故障时有可能丢失数据|
+> |acks=1|partition的leader接收到数据，落盘后返回ack，如果在follower同步数据之前leader故障，那么将会丢失数据|
+> |acks=-1(all)|partition的leader和follower全部落盘成功后才返回ack。但是如果在follower同步完数据后，leader发送ack之前leader故障，那么会造成数据重复|
+
+![ack](../pic/ack-lever.jpg)
+> 背景：设置ack应答级别为（-1），那么leader收到数据，所有follower都开始同步数据，但有一个follower，因为某种故障，迟迟不能与leader进行同步，那么leader就要一直等下去，直到它完成同步，才能发送ack应答，这个问题怎么解决？
+>
+> kafka提供的解决方案 ISR队列：
+> - leader维护了一个动态的 in-sync replica set (ISR) ：和leader保持同步follower集合
+> - 当ISR中的follower完成数据的同步后，leader给producer发送ack应答
+> - 如果follower长时间（replica.lag.time.max.ms）未向leader同步数据，则该follower将被踢出ISR。
+> - leader发生故障后，就会从ISR中选举新的leader
+#### ack应答机制总结
+![ack-zongjie](../pic/ack-zongjie.jpg)
+
+###### code:set ack
+```java
+ // 设置acks
+properties.put(ProducerConfig.ACKS_CONFIG, "all");
+// 重试次数retries，默认是int最大值，2147483647
+properties.put(ProducerConfig.RETRIES_CONFIG, 3);
+```
+### 生产经验--数据去重
+#### 数据传递语义
+![datachuandiyuyi](../pic/datachuandiyuyi.jpg)
+##### 幂等性
+> 1. 幂等性原理：
+>   ![idempotence](../pic/idempotence.jpg)
+> 2. idempotence describe
+>   ![idempotence](../pic/idempotence-describe.jpg) 
+> 3. 开启幂等性
+>   在producer的配置对象中，添加enable.idempotence,参数默认值为true，设置false就关闭了
+#### 生产者事物
+> &emsp;&emsp;0.11版本的kafka同时引入了事物的特性，为了实现跨分区会话的事物，需要引入一个全局唯一的Transaction ID，需要将producer获得的PID和TRansaction ID 绑定。这样当producer重启后就可以通过正在进行的Transaction ID 获得原来的PID。
+> &emsp;&emsp;为了管理Transaction，kafka引入了一个新的组件Transaction Coordinator.producer就是通过和Transaction Coordinator交互获得Transaction ID对应的任务状态，Transaction coordinator还负责将事物所有写入kafka的内部topic，这样即使整个服务重启，由于事物状态得到保存，进行中的事物状态可以得到恢复，从而继续进行。
+> PS：提前开启幂等性！！！
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
