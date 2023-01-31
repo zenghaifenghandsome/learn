@@ -202,7 +202,7 @@ sudo chmod 777 kafka
 |enable.idempotence|是否开启幂等性，默认true，开启幂等性|
 |compression.type|生产者发送的所有数据的压缩方式，默认是none，不压缩，支持的压缩类型：none、gzip、snappy、lz4、zstd|
 ### 异步发送API
-####普通异步发送(不带回调函数)
+#### 普通异步发送(不带回调函数)
 ###### 编写代码实现异步发送数据（producer）
 1. 创建maven工程，导入kafka依赖
     ```xml
