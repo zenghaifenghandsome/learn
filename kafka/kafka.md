@@ -78,12 +78,12 @@
 >           #配置连接Zookeeper集群地址，（在zookeeper根目录创建/kafka,方便管理）
 >           zookeeper.connect=hadoop102:2181,hadoop103:2181,hadoop104:2181/kafka
 >       ```
->   4.配置环境变量,并分发生效
->   5.分发安装包
->   6.修改配置文件中的broker.id
->   7.启动集群
->       **i.启动zookeeper集群：zk start**
->       **ii.依次在三个节点上启动kafka：bin/kafka-server-start.sh -daemon config/server.properties**
+>   4. 配置环境变量,并分发生效
+>   5. 分发安装包
+>   6. 修改配置文件中的broker.id
+>   7. 启动集群
+>       **i.启动zookeeper集群：zk start**<br>
+>       **ii.依次在三个节点上启动kafka：bin/kafka-server-start.sh -daemon config/server.properties**<br>
 >       **iii.关闭集群：bin/kafka-server-stop.sh**
 ### kafka群起脚本
 #### 脚本编写
@@ -393,8 +393,8 @@ properties.put(ProducerConfig.RETRIES_CONFIG, 3);
 > 3. 开启幂等性
 >   在producer的配置对象中，添加enable.idempotence,参数默认值为true，设置false就关闭了
 #### 生产者事物
-> &emsp;&emsp;0.11版本的kafka同时引入了事物的特性，为了实现跨分区会话的事物，需要引入一个全局唯一的Transaction ID，需要将producer获得的PID和TRansaction ID 绑定。这样当producer重启后就可以通过正在进行的Transaction ID 获得原来的PID。
-> &emsp;&emsp;为了管理Transaction，kafka引入了一个新的组件Transaction Coordinator.producer就是通过和Transaction Coordinator交互获得Transaction ID对应的任务状态，Transaction coordinator还负责将事物所有写入kafka的内部topic，这样即使整个服务重启，由于事物状态得到保存，进行中的事物状态可以得到恢复，从而继续进行。
+> &emsp;&emsp;0.11版本的kafka同时引入了事物的特性，为了实现跨分区会话的事物，需要引入一个全局唯一的Transaction ID，需要将producer获得的PID和TRansaction ID 绑定。这样当producer重启后就可以通过正在进行的Transaction ID 获得原来的PID。<br>
+> &emsp;&emsp;为了管理Transaction，kafka引入了一个新的组件Transaction Coordinator.producer就是通过和Transaction Coordinator交互获得Transaction ID对应的任务状态，Transaction coordinator还负责将事物所有写入kafka的内部topic，这样即使整个服务重启，由于事物状态得到保存，进行中的事物状态可以得到恢复，从而继续进行。<br>
 > PS：提前开启幂等性！！！
 
 
