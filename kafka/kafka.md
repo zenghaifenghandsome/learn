@@ -125,15 +125,15 @@ sudo chmod 777 kafka
 ### kafka命令行操作
 #### 操作topics命令
 >    kafka-topics.sh [参数]
->    1. 查看当前服务器中的所有topic
+>    1. 查看当前服务器中的所有topic<br>
 >       kafka-topics.sh --bootstrap-server hadoop102:9092 --list 
->    2. 创建一个主题名为first的topic
+>    2. 创建一个主题名为first的topic<br>
 >       kafka-topics.sh --bootstrap-server hadoop102:9092 --create --replication-factor 3 --partitions 1 --topic first
->    3. 查看topic的详情
+>    3. 查看topic的详情<br>
 >      kafka-topics.sh --bootstrap-server hadoop102:9092 --describe --topic first
->    4. 修改分区数 **（注意：分区数只能增加，不能减少）**
+>    4. 修改分区数 **（注意：分区数只能增加，不能减少）**<br>
 >       kafka-topics.sh --bootstrap-server hadoop102:9092 --alter --topic first --partitions 3
->   5.删除topic
+>   5. 删除topic<br>
 >       kafka-topics.sh --bootstrap-server hadoop102:9092 --delete --topic first   
 ##### 主要参数
 | 参数 | 描述 |
