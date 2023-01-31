@@ -81,7 +81,7 @@
 >   4. 配置环境变量,并分发生效
 >   5. 分发安装包
 >   6. 修改配置文件中的broker.id
->   7. 启动集群
+>   7. 启动集群<br>
 >       **i.启动zookeeper集群：zk start**<br>
 >       **ii.依次在三个节点上启动kafka：bin/kafka-server-start.sh -daemon config/server.properties**<br>
 >       **iii.关闭集群：bin/kafka-server-stop.sh**
