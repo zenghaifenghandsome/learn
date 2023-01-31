@@ -189,8 +189,13 @@ sudo chmod 777 kafka
 
 #### 生产者重要参数
 |参数|描述|
-|:-:|:-:|
+|:-|-|
 |bootstrap.server|生产者连接集群所需要的broker ip地址和端口 清单，可以配置1个或多个，中间用“，”隔开。生产者从给定的broker里查找到其他broker信息|
 |key.seriallizer、value.seriallizer|指定发送消息的key和value的序列化类型，要写全类名|
 |buffer.memory|RecordAccumular缓存去的总大小，默认32m|
 |batch.size|缓冲区一批数据最大值，默认16k,适当增加该值，可以提高吞吐量，但是如果该值设置过大，会导致数据传输延迟增加|
+|linger.ms|如果数据迟迟未达到**batch.size**,sender等待**linger.time**之后就会发送数据，单位是ms，默认是0ms，表示没有延迟。生产环境建议该值大小为5-100ms之间|
+|acks|0：生产者发送过来的数据，不需要等数据落盘应答<br>1:生产者发送过来的数据，Leader数据落盘后应答<br>-1(all):生产者发送过来的数据，Leader和isr队列里的所有节点数据都落盘后应答。默认值是-1|
+|max.in.flight.requests.per.connection|允许最多没有返回ack的次数，默认是5，开启幂等性要保证该值是1-5的数字|
+|retries|当消息发送错误的时候，系统会重新发送消息，retries表示重试次数，默认值是int的最大值，2147483647<br>如果设置了重试，还想保证消息的有序性，需要设置MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION=1,否则在重试此失败消息的时候，其他消息可能发送成功了|
+
