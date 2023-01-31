@@ -180,5 +180,17 @@ sudo chmod 777 kafka
 ### 生产者消息发送流程
 #### 发送原理
 > kafka 的 Producer发送消息采用的是**异步发送**的方式
+> 在消息的发送过程中，涉及到2个线程：**main线程**和**Sender线程**，
+> 以及一个线程共享变量：**RecordAccumular**
 >
-> 
+> main线程中创建了一个**双端队列RecordAccumular**,将消息发送到RecordAccumular
+> sender线程不断的从RecordAccumular中拉取数据发送到kafka broker
+![producer-sende](../pic/producer-sende.jpg)
+
+#### 生产者重要参数
+|参数|描述|
+|:-:|:-:|
+|bootstrap.server|生产者连接集群所需要的broker ip地址和端口 清单，可以配置1个或多个，中间用“，”隔开。生产者从给定的broker里查找到其他broker信息|
+|key.seriallizer、value.seriallizer|指定发送消息的key和value的序列化类型，要写全类名|
+|buffer.memory|RecordAccumular缓存去的总大小，默认32m|
+|batch.size|缓冲区一批数据最大值，默认16k,适当增加该值，可以提高吞吐量，但是如果该值设置过大，会导致数据传输延迟增加|
