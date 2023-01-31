@@ -153,7 +153,7 @@ sudo chmod 777 kafka
 ```linux
  kafka-console-producer.sh [参数]
 ```
->   1.生成消息
+>   1. 生成消息<br>
 >       kafka-console-producer.sh --bootstrap-server hadoop102:9092 --topic first
 ##### 主要参数
 |参数|描述|
@@ -165,9 +165,9 @@ sudo chmod 777 kafka
 ```linux
     kafka-console-consumer.sh [参数]
 ```
-> 1.消费消息
+> 1. 消费消息<br>
 >   kafka-console-consumer.sh --bootstrap-server hadoop:102 --topic first
-> 2.从头开始消费
+> 2. 从头开始消费<br>
 >   kafka-console-consumer.sh --bootstrap-server hadoop:102 --from-begining --topic first
 ##### 主要参数
 |参数|描述|
@@ -250,7 +250,7 @@ sudo chmod 777 kafka
    - hadoop102 create consumer
    - do code running
 #### 带回调函数的异步发送
-> callback function 会在producer 收到ack时调用，为异步调用
+> callback function 会在producer 收到ack时调用，为异步调用<br>
 >   this function have two parameters,**RecordMetadata(元数据信息)** and **Exception(异常信息)**
 >   - if Exception is null ,then send message is success
 >   - if Exception is not null ,then send message is failure
@@ -390,12 +390,12 @@ properties.put(ProducerConfig.RETRIES_CONFIG, 3);
 >   ![idempotence](../pic/idempotence.jpg)
 > 2. idempotence describe
 >   ![idempotence](../pic/idempotence-describe.jpg) 
-> 3. 开启幂等性
+> 3. 开启幂等性<br>
 >   在producer的配置对象中，添加enable.idempotence,参数默认值为true，设置false就关闭了
 #### 生产者事物
 > &emsp;&emsp;0.11版本的kafka同时引入了事物的特性，为了实现跨分区会话的事物，需要引入一个全局唯一的Transaction ID，需要将producer获得的PID和TRansaction ID 绑定。这样当producer重启后就可以通过正在进行的Transaction ID 获得原来的PID。<br>
 > &emsp;&emsp;为了管理Transaction，kafka引入了一个新的组件Transaction Coordinator.producer就是通过和Transaction Coordinator交互获得Transaction ID对应的任务状态，Transaction coordinator还负责将事物所有写入kafka的内部topic，这样即使整个服务重启，由于事物状态得到保存，进行中的事物状态可以得到恢复，从而继续进行。<br>
-> PS：提前开启幂等性！！！
+> &emsp;PS：提前开启幂等性！！！
 
 
 
