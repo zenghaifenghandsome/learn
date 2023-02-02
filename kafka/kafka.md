@@ -396,6 +396,66 @@ properties.put(ProducerConfig.RETRIES_CONFIG, 3);
 > &emsp;&emsp;0.11版本的kafka同时引入了事物的特性，为了实现跨分区会话的事物，需要引入一个全局唯一的Transaction ID，需要将producer获得的PID和TRansaction ID 绑定。这样当producer重启后就可以通过正在进行的Transaction ID 获得原来的PID。<br>
 > &emsp;&emsp;为了管理Transaction，kafka引入了一个新的组件Transaction Coordinator.producer就是通过和Transaction Coordinator交互获得Transaction ID对应的任务状态，Transaction coordinator还负责将事物所有写入kafka的内部topic，这样即使整个服务重启，由于事物状态得到保存，进行中的事物状态可以得到恢复，从而继续进行。<br>
 > &emsp;PS：提前开启幂等性！！！
+#### 生产经验-数据有序
+![data-orderly](../pic/data-orderly.png)
+#### 生产经验-如何保证数据有序or解决数据乱序
+> 1. 方案一
+>   禁止重试，需要设置以下参数
+>   设置retries=0
+>   说明：数据出现乱序的根本原因是，重试失败。关闭重试，则可保证数据是有序的，但是这样做，可能会导致数据丢失
+> 
+> 2. 方案二
+>   启用幂等性，需要设置以下参数
+>   设置enable.idempotent=true,启用幂等性
+>   设置max.in.flight.requests.per.connection,小于等于5
+>   设置retries,保证其大于0
+>   设置acks，保证其为-1
+![how-to-orderly-data](../pic/how-to-orderly-data.png)
+### kafka broker
+#### zookeeper中储存了kafka的信息
+> 查看zookeeper中kafka的信息
+> 1. 启动zookeeper客户端：bin/zkCli.sh
+> 2. 通过ls命令列出kafka的节点信息：ls kafka/
+![kafka-in-zookeeper](../pic/kafka-in-zookeeper.png)
+#### kafka broker 总体工作流程
+![broker-work](../pic/broker-work.png)
+#### broker 重要参数
+|参数|描述|
+|:-|-|
+|replica.lag.time.max.ms|ISR中的follower超过该时间阈值（默认30s）未向leader发送同步数据，则该folloer将被踢出ISR|
+|auto.leader.rebalance.enable|默认true，自动leader partition平衡|
+|leader.imbalance.per.broker.percentage|默认是10%，每个broker允许的不平衡的leader的比率，如果每个broker超过了这个值，控制器会触发leader平衡|
+|leader.imbalance.check.interval.seconds|默认300s，检查leader负载是否平衡的间隔时间|
+|log.segment.bytes|kafka中log日志是分成一块块存储的，此配置是指log日志划分成块的大小，默认值1G|
+|log.index.interval.bytes|默认4kb，kafka里面每当写入4kb大小的日志（.log），然后就往index里面记录一个索引|
+|log.retention.hours|kafka中数据保存的时间，默认7天|
+|log.retention.minutes|kafka中数据保存的时间，分钟级别，默认关闭|
+|log.retention.ms|kafka中数据保存的时间，毫秒级别，默认关闭|
+|log.retention.check.interval.ms|检查数据是否保存超时的间隔，默认是5分钟|
+|log.retention.bytes|默认等于-1，表示无穷大，超过设置的所有日志总大小，删除最早的segment|
+|log.cleanup.policy|默认是delete，表示所有数据启用删除策略，如果设置值未compact，表示所有数据启用压缩策略|
+|num.io.threads|默认是8，负责写磁盘的线程数，整个参数的值要占总核数的50%|
+|num.replica.fetchers|副本拉取线程数，这个参数占总核数的50%的1/3|
+|num.network.threads|默认是3，数据传输线程数，这个参数占总核数的50%的2/3|
+|log.flush.interval.message|强制页缓存刷写到磁盘的条数，默认是Max（long）（92233720036854775807）一般交给系统管理|
+|log.flush.interval.ms|每隔多久，刷数据到磁盘，默认是null，一般不建议修改，交给系统自己管理|
+### kafka 副本
+#### kafka副本的基本信息
+|信息|描述|
+|---|---|
+|kafka副本的作用|提高数据可靠性|
+|kafka副本的个数|默认1个，生产环境中一般配置2个，保证数据的可靠性；但是过多的副本会增加磁盘储存空间、增加网络数据传输、降低ksfka的效率|
+|kafka副本角色|副本角色分为leader和follower，kafka生产者只会把数据发送给leader，follower会主动从leader上同步数据|
+|kafka中的AR|是所有副本的统称，（Assigned Repllicas）,AR = ISR + OSR,ISR:表示和leader保持同步（默认30s）的follower集合。OSR：表示follower与leader副本同步，延迟过多的副本|
+#### leader选举的过程
+1. kafka controller
+    kafka集群中有一个broker的controller会被选举为contraller leader，负责管理集群broker的上下线，所有的topic的分区副本分配和leader选举等工作。controller的信息同步工作是依赖于zookeeper的。
+2. kafka 分区副本leader的选举流程
+   ![controller-leader](../pic/controller-leader.png)
+    
+
+
+
 
 
 
