@@ -452,7 +452,22 @@ properties.put(ProducerConfig.RETRIES_CONFIG, 3);
     kafka集群中有一个broker的controller会被选举为contraller leader，负责管理集群broker的上下线，所有的topic的分区副本分配和leader选举等工作。controller的信息同步工作是依赖于zookeeper的。
 2. kafka 分区副本leader的选举流程
    ![controller-leader](../pic/controller-leader.png)
-    
+#### leader和follower故障处理细节
+1. follower 故障处理细节
+![follower-fault](../pic/follower-fault.png)
+2. leader 故障处理细节
+   ![leader-fault](../pic/leader-fault.png)
+> 关键词:
+> LEO:指的是每个副本最大的offset+1
+> HW：指的是消费者能见到的最大的offset,ISR队列中最小的LEO
+
+> follower 发生故障
+> follower发生故障后会 被临时踢出ISR，待该follower恢复后，follower会读取本地磁盘记录的上次HW，并将log文件高于HW的部分截取掉，从HW开始重新从leader中同步数据，等该follower的LEO大于等于该patition的HW，即follower追上leader之后，就可以重新加入ISR队列。
+
+> leader 发生故障
+> leader发生故障之后，会从ISR中选出一个新的leader，之后，为保证多个副本之间的数据一致性，其余follower会先将各自的log文件高于HW的部分截掉，然后从新的leader上同步数据，**注意：这只能保证副本之间 数据一致性，并不能保证数据不丢失或者不重复**
+
+
 
 
 
