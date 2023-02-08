@@ -467,6 +467,99 @@ properties.put(ProducerConfig.RETRIES_CONFIG, 3);
 > leader 发生故障
 > leader发生故障之后，会从ISR中选出一个新的leader，之后，为保证多个副本之间的数据一致性，其余follower会先将各自的log文件高于HW的部分截掉，然后从新的leader上同步数据，**注意：这只能保证副本之间 数据一致性，并不能保证数据不丢失或者不重复**
 
+## 文件存储
+### 文件存储机制
+1. topic数据的存储机制
+>   topic是逻辑上的概念，而partition是物理上的概念，每个partition对应一个log文件，该log文件中存储的就是Producer产生的数据，
+>   Producer生产的数据会被不断追加这个文件的末尾，可以认为是文件写入的追加模式。为了防止log文件一直被追加写入导致log文件越来越大，
+>   **这样在大数据的场景下，会导致数据定位和效率低下，Kafka采用了分片和索引机制，将每个partition分为多个segment。**每个segment包含：".index"文件、".log"文件和".timeindex"文件等。这些文件位于
+> 一个文件夹下，该文件夹的命名为：topic名称+分区号，例如：first-0
+> - .log日志文件
+> - .index偏移量索引文件
+> - .timeindex时间戳索引文件
+> - 其他文件
+> **index和log文件以当前segment的第一条消息的offset命名**
+> ![partition-save-file-mode](../pic/partition-Save-File-mode.png)
+
+2. log日志的查看
+>log日志直接查看是乱码，需要使用工具：
+>```kafka-run-class.sh kafka.tools.DumpLogSegments --files <filename>```
+
+3.index文件和log文件详解
+![index-and-log](../pic/log-and-index.png)
+日志存储参数配置
+|参数|描述|
+|--|--|
+|log.segment.bytes|kakfka中的log日志是分块存储的，此配置是指log日志分成块的大小，默认1G|
+|log.index.interval.bytes|默认4kb，kafka里面每写入4kb的数据，就往index文件中写入一条索引。稀疏索引|
+
+#### 文件清理策略
+1. kafka的数据文件保存时间是：默认是7天
+2. kafka的数据文件保存可以通过以下参数修改：
+   ```properties
+    log.retention.hours:最低优先级小时，默认168小时（7天）
+    log.retention.minutes:分钟
+    log.retention.ms:最高优先级毫秒
+    log.retention.checke.interval.ms:负责设置检查周期，默认5分钟
+   ```
+3. 一旦超过了设置的时间就会采取清理策略，清理策略有两种：**delete 和 compact**
+##### delete清理策略
+> delete日志删除：将过期的日志删除
+> **配置：log.cleanup.policy=delete**
+> 基于时间：默认打开，以segment中记录的最大时间为文件的时间戳
+> 基于大小：默认关闭，超过设置的所有日志大小，删除最早的segment
+>   log.retention.bytes,默认是-1，表示无穷大
+##### compact清理策略
+![logCleanup-compact](../pic/logCleanup-compact.png)
+
+#### 高效读写数据
+> 1. kafka本身就是分布式集群，可以采用分区技术并行度高
+> 2. 读数据采用稀疏索引，可以快速定位要消费的数据
+> 3. 顺序写磁盘
+>   kafka的Producer生产数据，要写到log文件中，为顺序写，官位有数据表明，同样的数据，顺序写能达到600m/s
+> 而随机只能100k/s.这和磁盘的机械结构有关，顺序写之所以快是因为其省去了大量磁头的寻址时间
+> ![read-write-to-disk](../pic/read-write-to-disk.png)
+> 4. 页缓存和零拷贝技术
+> ![pageCache-0copy](../pic/pageCache-0copy.png)
+
+|参数|描述|
+|--|--|
+|log.flush.interval.messages|强制页缓存刷写到磁盘的条数，默认是long的最大值，一般不建议修改，交给系统自己管理|
+|log.flush.interval.ms|每隔多久，刷写数据到磁盘，默认是null，一般不建议修改，交给系统自己管理|
+
+## kafka消费者
+### kafka消费方式
+1. pull（拉）模式
+> consumer采用从broker中主动去拉取数据。可以根据consumer的消费能力以适当的速录消费消息，
+> **pull模式的不足之处在于，如果kafka中没有数据，消费者可能会陷入循环中，一直返回空数据**
+> 针对这一点，kafka的消费者在消费数据时会传入一个时长参数timeout，如果当前没有数据可消费，
+> consumer会等待一段时间之后再返回，这段时长即为timeout
+> kafka采用这种方式
+2. push（推）模式
+> kafka没有采用这种方式，因为由broker决定消息发送速率，很难适应所有消费者的消费速率。它的目标是尽可能的
+> 以最快的速度传递消息，但是这样很容易造成consumer来不及处理消息，典型的表现就是拒绝服务以及网络拥塞
+
+### kafka消费者工作流程
+![kafka-consumer-work-process](../pic/kafka-consumer-work-process.png)
+### 消费者组原理
+#### 消费者组
+![consumer-group-1](../pic/consumer-group-1.png)
+![consumer-group-2](../pic/consumer-group-2.png)
+
+#### 消费者组初始化流程
+![consumer-group-init-process](../pic/consumer-group-init-process.png)
+#### 消费者组详细消费流程
+![consumer-group-consumption-process](../pic/consumer-group-consumption-process.png)
+
+#### Consumer重要参数
+|参数|描述|
+|-|-|
+|bootstrap.servers|向kafka集群建立初始连接用到的host/port列表|
+|key.deserializer、value.deserializer|指定接收消息的key和value的反序列化类型，要写全类名|
+|group.id|标记消费者所属的消费者组|
+|enable.auto.commit|默认值为true，消费者会自动周期性的向服务器提交偏移量|
+|auto.commit.interval.ms|若enable.auto.commit=true，表示消费者提交偏移量的频率，默认5s|
+|auto.offset.reset|当kafka中没有初始偏移量或当前偏移量在服务器中不存在（如，数据被删除了）该如何处理？earliest：自动重置偏移量到最早的偏移量。latest：默认，自动重置偏移量为最新的偏移量。none：如果消费者组原来的（previous）偏移量不存在，则向消费者抛异常。anything：向消费者抛异常|
 
 
 
