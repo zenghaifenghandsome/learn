@@ -560,6 +560,240 @@ properties.put(ProducerConfig.RETRIES_CONFIG, 3);
 |enable.auto.commit|默认值为true，消费者会自动周期性的向服务器提交偏移量|
 |auto.commit.interval.ms|若enable.auto.commit=true，表示消费者提交偏移量的频率，默认5s|
 |auto.offset.reset|当kafka中没有初始偏移量或当前偏移量在服务器中不存在（如，数据被删除了）该如何处理？earliest：自动重置偏移量到最早的偏移量。latest：默认，自动重置偏移量为最新的偏移量。none：如果消费者组原来的（previous）偏移量不存在，则向消费者抛异常。anything：向消费者抛异常|
+|offsets.topic.num.partitions|__consummer_offsets的分区数，默认时50个分区|
+|heartbeat.interval.ms|kafka消费者和coordinator之间的心跳时间间隔，默认3s。该条目的值必须小于session.timeout.ms,也不应该高于session.timeout.ms的1/3|
+|session.timeout.ms|kafka消费者和coordinator之间的连接超时时间，默认45s,如果超过该值，该消费者会被移除，消费者组执行再平衡|
+|max.poll.interval.ms|消费者处理消息的最大时长，默认5分钟，超过该值，该消费者被移除，消费者组执行再平衡|
+|fetch.min.bytes|默认1个字节。消费者从服务器获取一批消息的最小字节数|
+|fetch.max.wait.ms|默认500ms，如果没从服务器获取到一批数据的最小字节数。该时间到了，仍热会返回数据|
+|fetch.max.bytes|默认Default：52428800（50m）。消费者从服务器获取一批数据的最大字节数。如果服务器的一批数据大于这个值仍然可以全部拉回数据，因此这个值不是一个绝对的最大值。一批次的大小受message.max.bytes(broker config) or max.message.bytes(topic config) 影响|
+|max.poll.records|一次poll拉取数据返回消息的最大条数，默认500条|
+
+### 消费者API
+案例：
+```java
+package com.zeng.consumer
+
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecods;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Properties;
+
+public class CustomConsumer{
+    public static void main(String[] args){
+        //create consumer configuration object
+        Properties config = new Properties();
+    
+        //configure consumer
+        //conneting config
+        config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "hadoop102:9092");
+        //set configuration serialization format must
+        config.put(ConsumerConfig.KEY_DESERIALIZATION_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer");
+        config.put(ConsumerConfig.VALUE_DESERIALIZATION_CLASS_CONFIG,"org.apache.kafka.common.serialization.StringDeserializer");
+        
+        //consumer group configuration
+        config.put(ConsumerConfig.GROUP_ID_CONFIG, "test");
+
+        //create consumer
+        KafkaConsumer<String,String> consumer = new KafkaConsumer<String,String>(config);
+
+        //订阅主题
+        ArrayList<String> topics = new ArrayList<String>();
+        topics.add("first");
+        consumer.subscribe(topics);
+
+        //poll
+        while (true){
+            ConsumerRecords<String,String> consumerRecords = consumer.poll(Duration.ofSeconds(1));
+            //traves
+            for(ConsumerRecords<String,String> consumerRecord:consumerRecords){
+                System.out.println(consumerRecord);
+            }
+        }
+    }
+}
+```
+#### 生产经验-分区分配策略及再平衡
+![consumer-partition-and-level](../pic/consumer-partition-and-lever.png)
+|参数|描述|
+|-|-|
+|heartbeat.interval.ms|kafka消费者和coordinator之间的心跳时间间隔，默认3s，该条目的值必须小于session.timeout.ms,也不应该高于session.timeout.ms的1/3|
+|session.timeout.ms|kafka消费者和coordinator之间的连接超时时间，默认45s，超过该值，该消费者会被移除，消费者组执行再平衡|
+|max.poll.interval.ms|消费者处理消息的最大时长，默认5分钟，超过该值，消费者被移除，消费者组执行再平衡|
+|partition.assignment.strategy|消费者分区分配策略，默认策略是Range+CooperativeSticky。kafka可以同时使用多个分区分配策略，可以选择的策略包括：Range、RoundRobin、Sticky、CooperativeSticky|
+
+##### Range及再平衡
+###### Range 原理
+![Range-Assignment-Strategy-printciple](../pic/Range-Assignment-Strategy-principle.png)
+##### RoundRobin及再平衡
+###### RoundRobin 原理
+![RoundRobin-Assignment-Strategy-printciple](../pic/RoundRobin-Assignment-Strategy-principle.png)
+##### Sticky及再平衡
+###### Sticky 原理
+> 粘性分区定义：
+>   可以理解为分配的结果带有“粘性”，即在执行一次新的分配之前，考虑上一次分配的结果，尽量少的调整分配的变动，可以节省大量的开销，
+> 粘性分区时kafka从0.11.X版本开始引入这种分区分配策略，首先会尽力均衡的放置分区到消费者上面，在出现同一消费者组内消费者出现问题
+> 的时候，会尽量保持原有分配的分区不变化
+
+### offset位移
+#### offset的默认维护位置
+![offset-location-change](../pic/offset-location-change.png)
+>   由于consumer在消费过程中可能会出现断电宕机等故障，consumer在恢复后，需要从故障前的位置开始继续消费，
+> 所以consumer需要实时记录自己消费到了哪个offset，以便故障恢复后继续消费。
+>   kafka0.9版本之前，consumer默认将offset保存在zookeeper中，从0.9版本开始，consumer默认将offset保存在kafka的一个内置
+> topic中，该topic为：__consumer_offsets，由系统消费，如果我们想要验证它的存在，需要修改配置文件，
+> config/consumer.properties中添加配置exclude.internal.topic=false,默认是true，表示不能消费系统主题，.
+>   在__consumer_offsets主题中，采用key+value的方式存储数据。key是groupId+topic+分区号，value是当前offset值。
+> 每隔一段时间，kafka内部会对这个内部topci进行compact，即每个groupId+topic+分区号只保留最新的数据。
+ 
+#### 自动提交offset
+![auto-commit-offsets](../pic/auto-commit-offset.png)
+#### 手动提交offset
+![commit-offsets](../pic/commit-offset.png)
+##### 同步提交offsetCommitSync
+> 同步提交有失败重试机制，更加可靠
+```java
+package com.zeng.kafka.consumer;
+
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import java.util.Arrays;
+import java.util.Properties;
+
+public class CustomConsumerByHand {
+    public static void main(String[] args) {
+        // 1. 创建kafka消费者配置类
+        Properties properties = new Properties();
+        // 2. 添加配置参数
+        // 添加连接
+        properties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "hadoop102:9092");
+        // 配置序列化 必须
+        properties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer");
+        properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer");
+        // 配置消费者组
+        properties.put(ConsumerConfig.GROUP_ID_CONFIG, "test");
+        // 是否自动提交offset
+        properties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
+        // 提交offset的时间周期
+        properties.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000");
+
+        // 3. 创建kafka消费者
+        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(properties);
+
+        // 4. 设置消费主题  形参是列表
+        consumer.subscribe(Arrays.asList("first"));
+
+        // 5. 消费数据
+        while (true){
+            // 6. 读取消息
+            ConsumerRecords<String, String> consumerRecords = consumer.poll(Duration.ofSeconds(1));
+
+            // 7. 输出消息
+            for (ConsumerRecord<String, String> consumerRecord : consumerRecords) {
+                System.out.println(consumerRecord.value());
+            }
+// 同步提交offset
+            consumer.commitSync();
+        }
+
+    }
+}
+
+```
+##### 异步提交offsetCommitAsync
+> 虽然同步提交更可靠，但是由于会阻塞当前线程，直到提交成功，会极大的影响性能，因此吞吐量会受到极大的影响，因此更多情况下会选择
+> 异步提交
+```java
+package com.zeng.kafka.consumer;
+
+import org.apache.kafka.clients.consumer.*;
+import org.apache.kafka.common.TopicPartition;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Properties;
+
+public class CustomConsumerByHand {
+    public static void main(String[] args) {
+         // 1. 创建kafka消费者配置类
+        Properties properties = new Properties();
+        // 2. 添加配置参数
+        // 添加连接
+        properties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "hadoop102:9092");
+        // 配置序列化 必须
+        properties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer");
+        properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer");
+        // 配置消费者组
+        properties.put(ConsumerConfig.GROUP_ID_CONFIG, "test");
+        // 是否自动提交offset
+        properties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
+        // 提交offset的时间周期
+        properties.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000");
+
+        // 3. 创建kafka消费者
+        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(properties);
+
+        // 4. 设置消费主题  形参是列表
+        consumer.subscribe(Arrays.asList("first"));
+
+        // 5. 消费数据
+        while (true){
+            // 6. 读取消息
+            ConsumerRecords<String, String> consumerRecords = consumer.poll(Duration.ofSeconds(1));
+
+            // 7. 输出消息
+            for (ConsumerRecord<String, String> consumerRecord : consumerRecords) {
+                System.out.println(consumerRecord.value());
+            }
+
+            // 异步提交offset
+            consumer.commitAsync(new OffsetCommitCallback() {
+                /**
+                 * 回调函数输出
+                 * @param offsets   offset信息
+                 * @param exception 异常
+                 */
+                @Override
+                public void onComplete(Map<TopicPartition, OffsetAndMetadata> offsets, Exception exception) {
+                    // 如果出现异常打印
+                    if (exception != null ){
+                        System.err.println("Commit failed for " + offsets);
+                    }
+                }
+            });
+        }
+
+    }
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
