@@ -81,4 +81,52 @@
 ## systemctl
 - systemctl start|restart|stop|status 服务名
 - systemctl list-unit-files 查看服务开机启动状态
-- 
+- systemctl disable service_name 关闭指定服务的开机自启
+- systemctl enable service_name 启动指定服务的开机自启
+## 防火墙
+- systemctl status firewalld 查看防火墙服务状态
+- systemctl stop firewalld 临时关闭防火墙
+- systemctl enable firewalld.service 查看防火墙开机自启状态
+- systemctl disable firewalld.service 设置开机时启动防火墙
+- systemctl is-enabled firewalld.service 查看服务是否开机自启 disabled开机不自启 enabled开机自启
+## 关机重启命令
+> 正确的关机流程：sync ->shutdown ->reboot ->halt
+
+基本语法：
+1. sync 将数据由内存同步到磁盘
+2. halt 关闭系统=shutdown -h now | poweroff
+3. reboot 重启 = shutdown -r now
+4. shutdown [选项] 时间
+5. shutdown参数说明：
+   |参数|功能|
+   |-|-|
+   |-h|halt 关机|
+   |-r|reboot 重启|
+
+6. now参数说明：
+   |参数|功能|
+   |-|-|
+   |now|立刻关机|
+   |时间|等待多久后关机（时间单位时分钟）|
+
+## 常用基本命令
+### man 获取帮助信息
+    man [命令/配置文件]
+|信息|功能|
+|-|-|
+|NAME|命令的名称和单行描述|
+|SYNOPSIS|怎样使用命令|
+|DESCRIPTION|命令功能的深入讨论|
+|EXAMPLES|怎样使用命令的例子|
+|SEE ALSO|相关主题 通常是手册页|
+### help 获取shell内置命令的帮助信息
+    help 命令
+### 常用快捷键
+|快捷键|功能|
+|-|-|
+|ctrl c| 停止进程|
+|ctrl L|清屏|
+|ctrl q|退出|
+|tab|补全|
+|上下键|使用过的命令|
+|ctrl u|清除当前敲的命令|
