@@ -34,4 +34,27 @@ MapReduce架构：
 1. map：并行处理数据
 2. reduce：汇总计算结果
 
-## 
+## MapReduce HDFS Yarn 的关系
+首先客户端提交任务，会发送到Yarn-ResourceManager，ResourceManager会调度资源，找到有资源的节点，启动一个container，运行一个ApplicationManager，ApplicationManager会向ResourceManager申请执行任务所需要的资源，resourceManager分配资源，ApplicationManager拿到资源，启动container，启动mapTask，mapTask从HDFS-DataNode读取数据，执行计算任务，然后启动reduceTask，mapTask计算结果汇总到reduceTask，reduceTask将任务结果写入到DataNode，数据落盘，任务结束，释放资源。
+
+## hadoop的主要目录结构
+1. bin：操作hadoop的命令工具
+2. sbin：启动关闭hadoop的服务的命令工具
+3. share：存放了文档，官方案例，jar包
+4. etc：配置文件
+5. lib：存放hadoop本地仓库（数据压缩功能的依赖）
+## hadoop3种运行模式
+1. 本地模式：单机运行，生产中不用
+2. 伪分布式：单机运行，模拟分布式，有Hadoop的所有功能，生产不用。
+3. 完全分布式：多台服务器组成的集群。
+
+### 本地模式（官方案例wordCount启动流程）
+1. 创建输入数据的文件夹：mkdir wcinput
+2. 创建数据文件：touch word.txt
+3. 创建数据：vim word.txt
+4. 启动：hadoop jar  share/hadoop/mapreduce/hadoop-mapreduce-examples-3.3.4.jar wordcount wcinput wcoutput
+5. 查看结果： cat wcoutput/part-r-00000
+
+### 完全分布式
+1. rsync 文件分发工具 
+
