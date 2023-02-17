@@ -6,11 +6,11 @@
 4. 高容错性：当因在处理任务中的某个环节失败时，hadoop会自动重新分配任务，保证任务正常进行。
 
 ## hadoop的组成
-> hadoop的组成分为2个阶段：1.X => 2.X
+> hadoop的组成分为2个阶段：1.X => 2.X<br>
 > 1.X ：
 > - mapReduce:兼顾计算和资源调度
 > - HDFS：数据存储
-> - common：辅助工具
+> - common：辅助工具<br>
 > 2.X:
 > - mapReduce:计算
 > - Yarn：资源调度
@@ -182,9 +182,9 @@ MapReduce架构：
 ### 群起集群配置workers文件
 hadoop/etc/hadoop/workers
 
->hadoop102
->hadoop103
->hadoop104
+>hadoop102<br>
+>hadoop103<br>
+>hadoop104<br>
 
 <font color='yellow' size='9'>注意：文件中不要有空行，行尾不要有空格</font>
 
