@@ -57,4 +57,137 @@ MapReduce架构：
 
 ### 完全分布式
 1. rsync 文件分发工具 
+```rsync -av $pdir/$fname $user@$host:$pdir/$fname ```
+2. xsync 集群分发脚本
+   ```bash
+   #!/bin/bash
+   # 判断参数个数
+   if [ $# -lt 1 ]
+   then 
+        echo "请输入参数"
+        exit;
+    fi
+    
+    #遍历集群
+    for host in hadoop102 hadoop103 hadoop104
+    do
+        echo "=================$host========================="
+        #遍历目录
+        for file in $@
+        do
+            #判断文件是否存在
+            if [ -e $file]
+            then 
+                #获取父目录
+                pdir=$(cd -P $(dirname $file); pwd)
+
+                #获取当前文件的名字
+                fname=$(basename $file)
+
+                #连接远程服务器，创建文件夹
+                ssh $host "mkdir -p $pdir"
+                # 分发文件
+                rsync -av $pdir/$fname $host:$pdir
+            else 
+                echo "文件不存在"
+            fi
+        done
+    done
+   ```
+## 集群部署规划
+|节点|Hadoop102|Hadoop103|hadoop104|
+|-|-|-|-|
+|HDFS|DataNode <br> NameNode|DataNode|DataNode<br>SecondNameNode|
+|YARN|NodeManager|NodeManager<br>ResourceManager|NodeManager|
+
+## 集群配置文件
+### 核心配置文件---[core-site.xml]
+```xml
+<configuration>
+    <!--指定NameNode地址 -->
+    <property>
+        <name>fs.defaultFS</name>
+        <value>hdfs://hadoop102:8020</value>
+    </property>
+    
+    <!-- 指定hadoop数据的储存目录-->
+    <property>
+        <name>hadoop.tmp.dir</name>
+        <value>/opt/module/hadoop/data</value>
+    </property>
+
+    <!-- 配置HDFS网页登录使用的静态用户为atguigu-->
+    <property>
+        <name>hadoop.http.staticuser.user</name>
+        <value>atguigu</value>
+    </property>
+</configuration>
+```
+### HDFS配置文件---[hdfs-site.xml]
+```xml
+<configuration>
+    <!--NameNode 网页访问地址-->
+    <property>
+        <name>dfs.namenode.http-address</name>
+        <value>hadoop102:9870</value>
+    </property>
+
+    <!-- SecondNameNode 网页访问地址-->
+    <property>
+        <name>dfs.namenode.secondary.http-address</name>
+        <value>hadoop104:9868</value>
+    </property>
+</configuration>
+```
+### yarn配置文件---[yarn-site.xml]
+```xml
+<configuration>
+    <!-- 指定mapReduce走shuffle-->
+    <property>
+        <name>yarn.nodemanager.aux-services</name>
+        <value>mapreduce_shuffle</value>
+    </property>
+
+    <!-- 指定ResourceManager的节点地址-->
+    <property>
+        <name>yarn.resourcemanager.hostname</name>
+        <value>hadoop103</value>
+    </property>
+
+    <!-- 环境变量的继承-->
+    <property>
+        <name>yarn.nodemanager.env-whitelist</name>
+        <value>
+        JAVA_HOME,
+        HADOOP_COMMON_HOME,
+        HADOOP_HDFS_HOME,
+        HADOOP_CONF_DIR,
+        CLASSPATH_PREPEND_DISTCACHE,
+        HADOOP_YARN_HOME,
+        HADOOP_MAPRED_HOME
+        </value>
+    </property>
+</configuration>
+```
+### MapReduce配置文件---[mapred-site.xml]
+```xml
+<configuration>
+    <!--指定mapReduce程序在yarn上运行-->
+    <property>
+        <name>mapreduce.framework.name</name>
+        <value>yarn</value>
+    </property>
+<configuration>
+```
+### 群起集群配置workers文件
+hadoop/etc/hadoop/workers
+
+>hadoop102
+>hadoop103
+>hadoop104
+
+<font color='yellow' size='9'>注意：文件中不要有空行，行尾不要有空格</font>
+
+
+
 
